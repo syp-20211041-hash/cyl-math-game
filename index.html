@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>👑 老師超級控制台 (Admin Panel)</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --primary: #f59e0b;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      color: #f8fafc;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 950px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      border: 3px solid #334155;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+    h2, h3 { color: var(--primary); margin-top: 0; text-align: center; }
+    
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 0.9rem; }
+    
+    input[type="password"], input[type="number"], input[type="text"], select, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background-color: var(--bg);
+      color: white;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    select[multiple] { height: 140px; }
+
+    .flex-inputs { display: flex; gap: 10px; flex-wrap: wrap; }
+    .flex-inputs textarea { flex: 3; min-width: 200px; height: 50px; }
+    .flex-inputs input[type="number"] { flex: 1; min-width: 100px; height: 50px; }
+
+    button {
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    .btn-block { width: 100%; margin-bottom: 8px; }
+    .btn-start { background-color: var(--success); color: white; }
+    .btn-reset { background-color: var(--danger); color: white; }
+    .btn-warning { background-color: var(--primary); color: white; }
+    .btn-info { background-color: var(--purple); color: white; }
+    .btn-secondary { background-color: var(--blue); color: white; }
+
+    .hidden { display: none !important; }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-around;
+      background: var(--bg);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .player-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .kick-btn {
+      background: var(--danger);
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .mode-checkboxes {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+    .mode-checkboxes label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: #f8fafc;
+      margin-bottom: 0;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(5px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background-color: var(--card-bg);
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow-y: auto;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+    }
+    
+    .podium {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 15px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .podium-box {
+      border-radius: 8px 8px 0 0;
+      padding: 15px 10px;
+      color: #0f172a;
+      font-weight: bold;
+      width: 100px;
+    }
+    .podium-1 { background: #f59e0b; height: 110px; order: 2; }
+    .podium-2 { background: #cbd5e1; height: 85px; order: 1; }
+    .podium-3 { background: #b45309; height: 65px; color: white; order: 3; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+    th { background: #0f172a; color: var(--primary); }
+    td textarea { padding: 6px; font-size: 0.9rem; height: 40px; resize: vertical; }
+    
+    .status-text {
+      text-align: center;
+      font-weight: bold;
+      color: var(--blue);
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #0f172a;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 登入區塊 -->
+  <div id="loginCard" class="card">
+    <h2>👑 老師控制台登入</h2>
+    <div class="form-group">
+      <label>解鎖密碼:</label>
+      <input type="password" id="adminPass" placeholder="請輸入解鎖密碼">
+    </div>
+    <button id="loginBtn" class="btn-start btn-block">🔓 解鎖控制台</button>
+  </div>
+
+  <!-- 主控制板 -->
+  <div id="controlCard" class="card hidden">
+    <h2>🎮 遊戲對戰控制中心</h2>
+
+    <div class="status-bar">
+      <div>
+        <div style="font-size:0.8rem; color:#94a3b8;">已連線人數</div>
+        <div id="playerCount" style="font-size:1.5rem; font-weight:bold; color:#38bdf8;">0</div>
+      </div>
+      <div>
+        <div style="font-size:0.8rem; color:#94a3b8;">遊戲時間</div>
+        <div id="timerDisplay" style="font-size:1.5rem; font-weight:bold; color:#f59e0b;">60s</div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+      <button class="btn-secondary" style="flex:1;" onclick="openQrModal()">📱 顯示投影 QR Code</button>
+      <button class="btn-info" style="flex:1;" onclick="openHistoryModal()">📊 檢視歷史比賽戰報</button>
+    </div>
+    
+    <div class="form-group">
+      <label for="raceCategorySelect"><b>🎯 選擇比賽題型 (按 Ctrl/Cmd 多選)：</b></label>
+      <select id="raceCategorySelect" multiple>
+        <option value="cat1" selected>類別 1：整數 ÷ 1位小數 (9分)</option>
+        <option value="cat2">類別 2：整數 ÷ 整數 (10.5分)</option>
+        <option value="cat3">類別 3：小數 ÷ 整數 (13分)</option>
+        <option value="cat4">類別 4：小數 ÷ 小數 (15分)</option>
+        <option value="cat5">類別 5：應用題 (17分)</option>
+        <option value="cat6">類別 6：小數四則運算 (20分)</option>
+        <option value="cat7">類別 7：餘數應用題 (25分)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label><b>⚡ 遊戲加分機制開關：</b></label>
+      <div class="mode-checkboxes">
+        <label><input type="checkbox" id="enableCombo" checked> 🔥 連勝 Combo (1.2x / 1.5x)</label>
+        <label><input type="checkbox" id="enableRage" checked> ⚡ 10 秒狂暴雙倍 (2x)</label>
+        <label><input type="checkbox" id="enableSpeedBonus" checked> ⏱️ Speed Bonus (10秒內答對 +3分)</label>
+        <label><input type="checkbox" id="enableFirstBlood" checked> 🩸 First Blood (前3個答對者 +8/+5/+3分)</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="timerInput">設定比賽倒數秒數:</label>
+      <input type="number" id="timerInput" value="60" min="10" max="300">
+    </div>
+
+    <button class="btn-start btn-block" onclick="startGame()">🚀 啟動比賽 (Start Round)</button>
+    <button class="btn-reset btn-block" onclick="resetGame()">🔄 重置局數 (Reset Round)</button>
+  </div>
+
+  <div id="playerCard" class="card hidden">
+    <h3>👥 參賽學生名單 (可強制 Kick 人)</h3>
+    <div id="adminPlayerList">載入中...</div>
+  </div>
+
+  <div id="questionCard" class="card hidden">
+    <h2>📚 資料庫管理 ( 1365 題專屬題庫)</h2>
+    <div id="dbStatus" class="status-text">讀取資料庫中...</div>
+
+    <div style="display:flex; gap:10px; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:250px;">
+        <label><b>檢視/編輯題型庫：</b></label>
+        <select id="categorySelect" onchange="renderQuestionTable()">
+          <option value="cat1">類別 1：整數 ÷ 1位小數 (9分)</option>
+          <option value="cat2">類別 2：整數 ÷ 整數 (10.5分)</option>
+          <option value="cat3">類別 3：小數 ÷ 整數 (13分)</option>
+          <option value="cat4">類別 4：小數 ÷ 小數 (15分)</option>
+          <option value="cat5">類別 5：應用題 (17分)</option>
+          <option value="cat6">類別 6：小數四則運算 (20分)</option>
+          <option value="cat7">類別 7：餘數應用題 (25分)</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:20px; flex-wrap:wrap;">
+        <button class="btn-warning" onclick="reindexIDs()">重新整理 ID</button>
+        <button class="btn-start" onclick="saveToFirebase()">💾 儲存修改至 Firebase</button>
+      </div>
+    </div>
+
+    <div style="background:#0f172a; padding:15px; border-radius:8px; margin-bottom:15px;">
+      <h4 style="margin-top:0; color:#94a3b8;">新增題目至當前類別</h4>
+      <div class="flex-inputs">
+        <textarea id="newExpr" placeholder="輸入題目敘述或算式"></textarea>
+        <input type="number" step="any" id="newAns" placeholder="答案">
+        <button class="btn-start" style="height:50px;" onclick="addQuestion()">➕ 新增</button>
+      </div>
+    </div>
+
+    <h3>題目列表 (<span id="totalCount">0</span> 題)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50px;">ID</th>
+          <th>題目 / 算式 (expr)</th>
+          <th style="width: 100px;">答案 (ans)</th>
+          <th style="width: 70px;">操作</th>
+        </tr>
+      </thead>
+      <tbody id="questionTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 📱 QR Code Modal -->
+<div id="qrModal" class="modal-overlay hidden">
+  <div class="modal-content" style="text-align:center; max-width:400px;">
+    <h3 style="color:#38bdf8; margin-top:0;">📱 學生掃描 QR Code 加入遊戲</h3>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://syp-20211041-hash.github.io/math-game-mison/" style="width:250px; height:250px; background:white; padding:10px; border-radius:12px; margin:15px 0;">
+    <div style="color:#f59e0b; font-weight:bold; margin-bottom:15px;">https://syp-20211041-hash.github.io/math-game-mison/</div>
+    <button class="btn-reset btn-block" onclick="closeQrModal()">✕ 關閉視窗</button>
+  </div>
+</div>
+
+<!-- 🏆 歷史戰報 Modal -->
+<div id="historyModal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0; color:#f59e0b;">📊 比賽歷史戰報 (History)</h2>
+      <button class="btn-reset" onclick="closeHistoryModal()" style="padding:4px 12px;">✕ 關閉</button>
+    </div>
+    
+    <div class="form-group" style="margin-top:15px;">
+      <label><b>選擇歷史場次：</b></label>
+      <div style="display:flex; gap:10px;">
+        <select id="historySessionSelect" onchange="renderSessionDetails()" style="flex:1;">
+          <option value="">載入歷史戰報中...</option>
+        </select>
+        <button class="btn-reset" style="padding:8px 15px; font-size:0.9rem;" onclick="deleteSelectedHistory()">🗑️ 刪除此場紀錄</button>
+      </div>
+    </div>
+
+    <div id="sessionDetailArea"></div>
+  </div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCfd9EeEElqqfunP3bE97kuko-oQxA1rAc",
+    authDomain: "mison-math.firebaseapp.com",
+    databaseURL: "https://mison-math-default-rtdb.firebaseio.com",
+    projectId: "mison-math",
+    storageBucket: "mison-math.appspot.com",
+    messagingSenderId: "674092902679",
+    appId: "1:674092902679:web:ced826dc30745c644b6f52"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let timerInterval = null;
+  let questionDatabase = { cat1: [], cat2: [], cat3: [], cat4: [], cat5: [], cat6: [], cat7: [] };
+  let historyCache = {};
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("loginBtn").addEventListener("click", unlockAdmin);
+    document.getElementById("adminPass").addEventListener("keyup", (e) => {
+      if (e.key === "Enter") unlockAdmin();
+    });
+  });
+
+  function unlockAdmin() {
+    const pass = document.getElementById("adminPass").value;
+    if (pass === "misonmath" || pass === "") {
+      document.getElementById("loginCard").classList.add("hidden");
+      document.getElementById("controlCard").classList.remove("hidden");
+      document.getElementById("playerCard").classList.remove("hidden");
+      document.getElementById("questionCard").classList.remove("hidden");
+      
+      listenToGameData();
+      listenToQuestionsData();
+      listenToHistoryData();
+    } else {
+      alert("❌ 密碼錯誤！");
+    }
+  }
+
+  function openQrModal() { document.getElementById("qrModal").classList.remove("hidden"); }
+  function closeQrModal() { document.getElementById("qrModal").classList.add("hidden"); }
+
+  function listenToGameData() {
+    db.ref("players").on("value", snapshot => {
+      const data = snapshot.val() || {};
+      const players = Object.entries(data);
+      document.getElementById("playerCount").innerText = players.length;
+
+      const listEl = document.getElementById("adminPlayerList");
+      listEl.innerHTML = "";
+
+      if (players.length === 0) {
+        listEl.innerHTML = "<div style='color:#94a3b8; text-align:center;'>目前沒有學生加入</div>";
+        return;
+      }
+
+      players.forEach(([key, p]) => {
+        const row = document.createElement("div");
+        row.className = "player-row";
+        row.innerHTML = `
+          <span><strong>${p.name || '未命名'}</strong> (${p.score || 0}分)</span>
+          <button class="kick-btn" onclick="kickPlayer('${key}')">踢出 (Kick)</button>
+        `;
+        listEl.appendChild(row);
+      });
+    });
+  }
+
+  function listenToHistoryData() {
+    db.ref("history").on("value", snapshot => {
+      historyCache = snapshot.val() || {};
+      const selectEl = document.getElementById("historySessionSelect");
+      selectEl.innerHTML = "";
+
+      const keys = Object.keys(historyCache).reverse();
+      if (keys.length === 0) {
+        selectEl.innerHTML = "<option value=''>尚無任何歷史戰報</option>";
+        document.getElementById("sessionDetailArea").innerHTML = "<p style='text-align:center; color:#94a3b8;'>暫無比賽紀錄</p>";
+        return;
+      }
+
+      keys.forEach(k => {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.innerText = `🕒 ${historyCache[k].timestamp} (${historyCache[k].ranks ? historyCache[k].ranks.length : 0}人參賽)`;
+        selectEl.appendChild(opt);
+      });
+
+      renderSessionDetails();
+    });
+  }
+
+  function openHistoryModal() {
+    document.getElementById("historyModal").classList.remove("hidden");
+    renderSessionDetails();
+  }
+
+  function closeHistoryModal() {
+    document.getElementById("historyModal").classList.add("hidden");
+  }
+
+  // 🎯 刪除選擇的歷史紀錄功能
+  async function deleteSelectedHistory() {
+    const selectedKey = document.getElementById("historySessionSelect").value;
+    if (!selectedKey) {
+      alert("請先選擇要刪除的歷史場次！");
+      return;
+    }
+
+    if (confirm("⚠️ 確定要刪除這筆歷史比賽紀錄嗎？刪除後無法恢復。")) {
+      await db.ref("history/" + selectedKey).remove();
+      alert("🗑️ 該場紀錄已成功刪除！");
+    }
+  }
+
+  function renderSessionDetails() {
+    const selectedKey = document.getElementById("historySessionSelect").value;
+    const detailArea = document.getElementById("sessionDetailArea");
+
+    if (!selectedKey || !historyCache[selectedKey]) {
+      detailArea.innerHTML = "<p style='text-align:center; color:#94a3b8;'>請選擇一場比賽檢視詳細資料。</p>";
+      return;
+    }
+
+    const session = historyCache[selectedKey];
+    const ranks = session.ranks || [];
+
+    const p1 = ranks[0] ? `${ranks[0].name}<br>(${ranks[0].score}分)` : "無";
+    const p2 = ranks[1] ? `${ranks[1].name}<br>(${ranks[1].score}分)` : "無";
+    const p3 = ranks[2] ? `${ranks[2].name}<br>(${ranks[2].score}分)` : "無";
+
+    let tableRows = "";
+    ranks.forEach((r, idx) => {
+      tableRows += `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><b>${r.name}</b></td>
+          <td style="color:#f59e0b; font-weight:bold;">${r.score}</td>
+        </tr>
+      `;
+    });
+
+    detailArea.innerHTML = `
+      <div class="podium">
+        <div class="podium-box podium-2">🥈 2nd<br>${p2}</div>
+        <div class="podium-box podium-1">🥇 1st<br>${p1}</div>
+        <div class="podium-box podium-3">🥉 3rd<br>${p3}</div>
+      </div>
+
+      <h3 style="margin-top:20px; color:#38bdf8;">📋 完整成績排行榜</h3>
+      <table>
+        <thead>
+          <tr><th>名次</th><th>學生暱稱/座號</th><th>總得分</th></tr>
+        </thead>
+        <tbody>
+          ${tableRows || "<tr><td colspan='3'>無分數紀錄</td></tr>"}
+        </tbody>
+      </table>
+    `;
+  }
+
+  async function archiveMatchAndReset() {
+    const pSnap = await db.ref("players").once("value");
+    const playersData = pSnap.val() || {};
+    const playersArr = Object.values(playersData).sort((a, b) => b.score - a.score);
+
+    const nowStr = new Date().toLocaleString("zh-TW", { timeZone: "Asia/Hong_Kong" });
+
+    if (playersArr.length > 0) {
+      await db.ref("history").push({
+        timestamp: nowStr,
+        ranks: playersArr
+      });
+    }
+
+    await db.ref("players").remove();
+    await db.ref("devices").remove();
+    await db.ref("firstBloodCount").remove();
+  }
+
+  function startGame() {
+    const seconds = parseInt(document.getElementById("timerInput").value) || 60;
+    const selectEl = document.getElementById("raceCategorySelect");
+    const selectedCategories = Array.from(selectEl.selectedOptions).map(opt => opt.value);
+    
+    if (selectedCategories.length === 0) {
+      alert("請至少選擇一個比賽題型！");
+      return;
+    }
+
+    const enableCombo = document.getElementById("enableCombo").checked;
+    const enableRage = document.getElementById("enableRage").checked;
+    const enableSpeedBonus = document.getElementById("enableSpeedBonus").checked;
+    const enableFirstBlood = document.getElementById("enableFirstBlood").checked;
+
+    db.ref("firstBloodCount").set(0);
+
+    db.ref("gameState").set({
+      status: "started",
+      timer: seconds,
+      selectedCategories: selectedCategories,
+      enableCombo: enableCombo,
+      enableRage: enableRage,
+      enableSpeedBonus: enableSpeedBonus,
+      enableFirstBlood: enableFirstBlood
+    });
+
+    let timeLeft = seconds;
+    clearInterval(timerInterval);
+    
+    timerInterval = setInterval(async () => {
+      timeLeft--;
+      db.ref("gameState/timer").set(timeLeft);
+      document.getElementById("timerDisplay").innerText = timeLeft + "s";
+
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        alert("⏱️ 比賽倒數結束！戰報已自動存入歷史紀錄。");
+        
+        await archiveMatchAndReset();
+        db.ref("gameState").set({ status: "waiting", timer: 0 });
+      }
+    }, 1000);
+  }
+
+  async function resetGame() {
+    if (confirm("⚠️ 確定要重置局數嗎？目前的成績會存入歷史紀錄，並清空排行榜。")) {
+      clearInterval(timerInterval);
+      await archiveMatchAndReset();
+      
+      db.ref("gameState").set({
+        status: "waiting",
+        timer: 0
+      });
+      document.getElementById("timerDisplay").innerText = "--";
+      alert("🔄 局數已重置！");
+    }
+  }
+
+  function kickPlayer(key) {
+    if (confirm("確定要把這個學生踢出遊戲嗎？")) {
+      db.ref("players/" + key).remove();
+    }
+  }
+
+  function listenToQuestionsData() {
+    const statusEl = document.getElementById("dbStatus");
+    db.ref("questions").on("value", snapshot => {
+      if (snapshot.exists()) {
+        questionDatabase = snapshot.val();
+        statusEl.innerText = "✅ 成功讀取雲端專屬題庫！";
+      } else {
+        statusEl.innerText = "ℹ️ Firebase 目前尚未讀取到題目。";
+      }
+      renderQuestionTable();
+    }, error => {
+      statusEl.innerText = "❌ 題目資料讀取失敗: " + error.message;
+    });
+  }
+
+  function renderQuestionTable() {
+    const cat = document.getElementById('categorySelect').value;
+    const list = questionDatabase[cat] || [];
+    const tbody = document.getElementById('questionTable');
+    document.getElementById('totalCount').innerText = list.length;
+    tbody.innerHTML = '';
+    
+    list.forEach((q, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${q.id || index + 1}</td>
+        <td><textarea onchange="updateQuestion('${cat}', ${index}, 'expr', this.value)">${q.expr}</textarea></td>
+        <td><input type="number" step="any" value="${q.ans}" onchange="updateQuestion('${cat}', ${index}, 'ans', this.value)"></td>
+        <td><button class="btn-reset" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteQuestion('${cat}', ${index})">刪除</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function addQuestion() {
+    const cat = document.getElementById('categorySelect').value;
+    const expr = document.getElementById('newExpr').value.trim();
+    const ans = parseFloat(document.getElementById('newAns').value);
+
+    if (!expr || isNaN(ans)) {
+      alert("請輸入有效的題目與答案！");
+      return;
+    }
+
+    if (!questionDatabase[cat]) questionDatabase[cat] = [];
+    const list = questionDatabase[cat];
+    const newId = list.length > 0 ? Math.max(...list.map(q => q.id || 0)) + 1 : 1;
+
+    list.push({ id: newId, expr: expr, ans: ans });
+    document.getElementById('newExpr').value = '';
+    document.getElementById('newAns').value = '';
+    renderQuestionTable();
+  }
+
+  function updateQuestion(cat, index, key, value) {
+    if (key === 'ans') value = parseFloat(value);
+    questionDatabase[cat][index][key] = value;
+  }
+
+  function deleteQuestion(cat, index) {
+    if (confirm("確定要刪除這道題目嗎？")) {
+      questionDatabase[cat].splice(index, 1);
+      renderQuestionTable();
+    }
+  }
+
+  function reindexIDs() {
+    const cat = document.getElementById('categorySelect').value;
+    if (!questionDatabase[cat]) return;
+    questionDatabase[cat].forEach((q, index) => { q.id = index + 1; });
+    alert(`已將 ${cat} 順序重置！`);
+    renderQuestionTable();
+  }
+
+  function saveToFirebase() {
+    const statusEl = document.getElementById("dbStatus");
+    statusEl.innerText = "⏳ 正在同步更新至 Firebase...";
+    db.ref("questions").set(questionDatabase)
+      .then(() => {
+        statusEl.innerText = "✅ 所有修改已同步推送到 Firebase！";
+        alert("修改已成功儲存到 Firebase！");
+      })
+      .catch(error => {
+        statusEl.innerText = "❌ 儲存失敗: " + error.message;
+      });
+  }
+</script>
+</body>
+</html>
